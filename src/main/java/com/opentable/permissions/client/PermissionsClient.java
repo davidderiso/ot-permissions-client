@@ -33,19 +33,16 @@ public class PermissionsClient {
 
     private final PermsClientDiscoveryService permsClientDiscoveryService;
 
-    private final WebClient client;
+    private final WebClient client = WebClient.create();
 
     private static final Logger LOG = LoggerFactory.getLogger(PermsClientDiscoveryService.class);
 
     private OauthTokenResponse oauthTokenResponse;
 
     public PermissionsClient(PermissionsClientConfig permissionsClientConfig,
-                             PermsClientDiscoveryService permsClientDiscoveryService,
-                             WebClient client) {
+                             PermsClientDiscoveryService permsClientDiscoveryService) {
         this.permissionsClientConfig = permissionsClientConfig;
         this.permsClientDiscoveryService = permsClientDiscoveryService;
-        this.client = client;
-
     }
 
     public Mono<PrincipalPermissionsResponse> getPrincipalPermissions(Urn context, Urn principal) {
