@@ -51,7 +51,7 @@ public class PermissionsClient {
 
     public Mono<PrincipalPermissionsResponse> getPrincipalPermissions(Urn context, Urn principal) {
         String url = UriBuilder.fromUri(getPermissionsUrl())
-                .path("/api/v1/contexts/" + context.toString() + "/principals/")
+                .path("/api/v1/contexts/" + context.toString() + "/principals/"+principal.toString()+"/permissions")
                 .build()
                 .toString();
 
