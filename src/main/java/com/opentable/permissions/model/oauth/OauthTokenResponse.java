@@ -14,6 +14,7 @@ import lombok.NoArgsConstructor;
 public class OauthTokenResponse {
     private String access_token;
     private String token_type;
-    private String expires_in;
+    private Long expires_in;
     private String scope;
+    private Long expires_at;
 }

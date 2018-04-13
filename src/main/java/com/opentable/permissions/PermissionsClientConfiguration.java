@@ -1,14 +1,10 @@
 package com.opentable.permissions;
 
-import com.opentable.permissions.model.PermissionsClientConfig;
-
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-//@EnableDiscoveryClient
 @ComponentScan("com.opentable.permissions")
 public class PermissionsClientConfiguration {
 
@@ -27,8 +23,7 @@ public class PermissionsClientConfiguration {
     @Value("${ot.permissionsClient.clientSecret}")
     private String clientSecret;
 
-    @Bean
-    PermissionsClientConfig config () {
+    public PermissionsClientConfig config () {
         return PermissionsClientConfig
                 .builder()
                 .oauthServiceUrl(oauthServiceUrl)
@@ -36,7 +31,7 @@ public class PermissionsClientConfiguration {
                 .permissionServiceUrl(permissionServiceUrl)
                 .permissionServiceId(permissionServiceId)
                 .clientSecret(clientSecret)
-                .clientSecret(clientId)
+                .clientId(clientId)
                 .build();
     }
 }

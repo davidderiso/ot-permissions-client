@@ -2,10 +2,11 @@ package com.opentable.permissions.client;
 
 import com.opentable.httpheaders.OTHeaders;
 import com.opentable.permissions.discovery.PermsClientDiscoveryService;
-import com.opentable.permissions.model.PermissionsClientConfig;
+import com.opentable.permissions.PermissionsClientConfig;
 import com.opentable.permissions.model.PrincipalPermissionsResponse;
 import com.opentable.permissions.model.Urn;
 import com.opentable.permissions.model.oauth.OauthTokenResponse;
+import com.opentable.service.discovery.client.DiscoveryClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.CacheControl;
@@ -31,7 +32,7 @@ public class PermissionsClient {
 
     private final PermissionsClientConfig permissionsClientConfig;
 
-    private final PermsClientDiscoveryService permsClientDiscoveryService;
+    private PermsClientDiscoveryService permsClientDiscoveryService;
 
     private final WebClient client = WebClient.create();
 
@@ -39,10 +40,13 @@ public class PermissionsClient {
 
     private OauthTokenResponse oauthTokenResponse;
 
-    public PermissionsClient(PermissionsClientConfig permissionsClientConfig,
-                             PermsClientDiscoveryService permsClientDiscoveryService) {
+    public PermissionsClient(PermissionsClientConfig permissionsClientConfig) {
         this.permissionsClientConfig = permissionsClientConfig;
-        this.permsClientDiscoveryService = permsClientDiscoveryService;
+
+    }
+
+    public void setDiscoveryClient(DiscoveryClient discoveryClient) {
+        this.permsClientDiscoveryService = new PermsClientDiscoveryService(discoveryClient);
     }
 
     public Mono<PrincipalPermissionsResponse> getPrincipalPermissions(Urn context, Urn principal) {
@@ -56,12 +60,11 @@ public class PermissionsClient {
     }
 
 
-
     private Mono<OauthTokenResponse> getOauthToken() {
 
         Long nowLong = java.time.Instant.now().getEpochSecond();
         if (!Objects.isNull(oauthTokenResponse) &&
-            Long.parseLong(oauthTokenResponse.getExpires_in()) > nowLong) {
+            oauthTokenResponse.getExpires_at() > nowLong) {
             return Mono.just(oauthTokenResponse);
 
         }
@@ -73,10 +76,9 @@ public class PermissionsClient {
 
         String basicToken = "";
         try {
-            basicToken = Base64
+            basicToken = "Basic " + Base64
                     .getEncoder()
-                    .encodeToString(("Basic " +
-                                     permissionsClientConfig.getClientId() +
+                    .encodeToString((permissionsClientConfig.getClientId() +
                                      ":" +
                                      permissionsClientConfig.getClientSecret())
                                             .getBytes("utf-8"));
@@ -98,7 +100,11 @@ public class PermissionsClient {
                         return Mono.error(new ResponseStatusException(cr.statusCode()));
                     }
                     return cr.bodyToMono(OauthTokenResponse.class)
-                            .doAfterSuccessOrError((t, th) -> oauthTokenResponse = t);
+                            .doAfterSuccessOrError((t, th) -> {
+                                                           oauthTokenResponse = t;
+                    oauthTokenResponse.setExpires_at(java.time.Instant.now().getEpochSecond() +
+                                                     oauthTokenResponse.getExpires_in() * 1000);
+                            });
                 });
     }
 
@@ -107,7 +113,7 @@ public class PermissionsClient {
         return getOauthToken()
                 .flatMap(token -> this.client.get()
                         .uri(url)
-                        .header(HttpHeaders.AUTHORIZATION, token.getAccess_token())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token.getAccess_token())
                         .header(HttpHeaders.CACHE_CONTROL, CacheControl.noCache().getHeaderValue())
                         .header(OTHeaders.REQUEST_ID, UUID.randomUUID().toString())
                         .exchange()
@@ -115,14 +121,16 @@ public class PermissionsClient {
                             if (!cr.statusCode().is2xxSuccessful()) {
                                 LOG.warn("Error calling permissions service, code:" +
                                          cr.statusCode().getReasonPhrase());
+                                return Mono.error(new ResponseStatusException(cr.statusCode()));
                             }
-                            return Mono.error(new ResponseStatusException(cr.statusCode()));
+                            return Mono.just(cr);
                         })
                 );
     }
 
     private String getPermissionsUrl() {
-        if (!Objects.isNull(permissionsClientConfig.getPermissionServiceId())) {
+        if (!Objects.isNull(permissionsClientConfig.getPermissionServiceId()) &&
+            !Objects.isNull(permsClientDiscoveryService)) {
             return getServiceUrlFromDiscovery(permissionsClientConfig.getPermissionServiceId(),
                                               permissionsClientConfig.getPermissionServiceUrl());
         } else {
@@ -131,7 +139,8 @@ public class PermissionsClient {
     }
 
     private String getOauthUrl() {
-        if (!Objects.isNull(permissionsClientConfig.getOauthServiceId())) {
+        if (!Objects.isNull(permissionsClientConfig.getOauthServiceId()) &&
+            !Objects.isNull(permsClientDiscoveryService)) {
             return getServiceUrlFromDiscovery(permissionsClientConfig.getOauthServiceId(),
                                               permissionsClientConfig.getOauthServiceUrl());
         } else {
@@ -140,8 +149,12 @@ public class PermissionsClient {
     }
 
     private String getServiceUrlFromDiscovery(String serviceId, String alternateUrl) {
-        return permsClientDiscoveryService.lookUpServiceHost(serviceId)
-                .orElse(alternateUrl);
+        if (permsClientDiscoveryService != null) {
+            return permsClientDiscoveryService.lookUpServiceHost(serviceId)
+                    .orElse(alternateUrl);
+        }
+
+        return null;
     }
 
 
