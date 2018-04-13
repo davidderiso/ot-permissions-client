@@ -1,6 +1,8 @@
 package com.opentable.permissions.client;
 
+import com.google.common.base.Strings;
 import com.opentable.httpheaders.OTHeaders;
+import com.opentable.permissions.client.oauth.OauthClient;
 import com.opentable.permissions.discovery.PermsClientDiscoveryService;
 import com.opentable.permissions.PermissionsClientConfig;
 import com.opentable.permissions.model.ContextsForPrincipalResponse;
@@ -12,7 +14,6 @@ import com.opentable.permissions.model.PrincipalsResponse;
 import com.opentable.permissions.model.RolesInContextResponse;
 import com.opentable.permissions.model.RolesRequestObject;
 import com.opentable.permissions.model.Urn;
-import com.opentable.permissions.model.oauth.OauthTokenResponse;
 import com.opentable.service.discovery.client.DiscoveryClient;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
@@ -26,19 +27,13 @@ import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
 import javax.ws.rs.core.UriBuilder;
-import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static org.springframework.web.reactive.function.BodyInserters.fromFormData;
 
 public class PermissionsClient {
-
-    private static final String GET_TOKEN_ENDPOINT = "/api/v2/oauth/token";
-
-    private static final String GRANT_TYPE = "grant_type";
 
     private static final String PERMISSION_API_CONTEXTS = "/api/v1/contexts/";
 
@@ -50,17 +45,22 @@ public class PermissionsClient {
 
     private final WebClient client = WebClient.create();
 
-    private static final Logger LOG = LoggerFactory.getLogger(PermsClientDiscoveryService.class);
+    private final OauthClient oauthClient;
 
-    private OauthTokenResponse oauthTokenResponse;
+    private static final Logger LOG = LoggerFactory.getLogger(PermsClientDiscoveryService.class);
 
     public PermissionsClient(PermissionsClientConfig permissionsClientConfig) {
         this.permissionsClientConfig = permissionsClientConfig;
+        this.oauthClient = new OauthClient(permissionsClientConfig.getClientId(),
+                                           permissionsClientConfig.getClientSecret(),
+                                           permissionsClientConfig.getOauthServiceId(),
+                                           permissionsClientConfig.getOauthServiceUrl());
 
     }
 
     public void setDiscoveryClient(DiscoveryClient discoveryClient) {
         this.permsClientDiscoveryService = new PermsClientDiscoveryService(discoveryClient);
+        this.oauthClient.setDiscoveryClient(discoveryClient);
     }
 
     public Mono<PrincipalPermissionsResponse> getPrincipalPermissions(Urn context, Urn principal) {
@@ -173,58 +173,58 @@ public class PermissionsClient {
                 .flatMap(cr -> cr.bodyToMono(PrincipalPermissionsResponse.class));
     }
 
-
-    private Mono<OauthTokenResponse> getOauthToken() {
-
-        Long nowLong = java.time.Instant.now().getEpochSecond();
-        if (!Objects.isNull(oauthTokenResponse) &&
-            oauthTokenResponse.getExpires_at() > nowLong) {
-            return Mono.just(oauthTokenResponse);
-
-        }
-
-        String oauthUrl = UriBuilder.fromUri(getOauthUrl())
-                .path(GET_TOKEN_ENDPOINT)
+    public Mono<ClientResponse> deletePrincipalPermission(Urn context, Urn principal, Urn permission) {
+        String url = UriBuilder.fromUri(getPermissionsUrl())
+                .path(PERMISSION_API_CONTEXTS + context.toString() + PRINCIPALS + principal.toString() +
+                      "/permissions/" + permission.toString())
                 .build()
                 .toString();
 
-        String basicToken = "";
-        try {
-            basicToken = "Basic " + Base64
-                    .getEncoder()
-                    .encodeToString((permissionsClientConfig.getClientId() +
-                                     ":" +
-                                     permissionsClientConfig.getClientSecret())
-                                            .getBytes("utf-8"));
-        } catch (Exception e) {
-            return Mono.error(e);
-        }
+        return deleteFromPermissions(url);
+    }
 
-        return client.post()
-                .uri(oauthUrl)
-                .header(HttpHeaders.CACHE_CONTROL, CacheControl.noCache().getHeaderValue())
-                .header(OTHeaders.REQUEST_ID, UUID.randomUUID().toString())
-                .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-                .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-                .header(HttpHeaders.AUTHORIZATION, basicToken)
-                .body(fromFormData(GRANT_TYPE, "client_credentials"))
-                .exchange()
-                .flatMap(cr -> {
-                    if (!cr.statusCode().is2xxSuccessful()) {
-                        return Mono.error(new ResponseStatusException(cr.statusCode()));
-                    }
-                    return cr.bodyToMono(OauthTokenResponse.class)
-                            .doAfterSuccessOrError((t, th) -> {
-                                oauthTokenResponse = t;
-                                oauthTokenResponse.setExpires_at(java.time.Instant.now().getEpochSecond() +
-                                                                 oauthTokenResponse.getExpires_in() * 1000);
-                            });
-                });
+    public Mono<ClientResponse> deletePrincipalRole(Urn context, Urn principal, Urn role) {
+        String url = UriBuilder.fromUri(getPermissionsUrl())
+                .path(PERMISSION_API_CONTEXTS + context.toString() + PRINCIPALS + principal.toString() +
+                      "/roles/" + role.toString())
+                .build()
+                .toString();
+
+        return deleteFromPermissions(url);
+    }
+
+    public Mono<ClientResponse> deleteRolePermission(Urn context, Urn role, Urn permission) {
+        String url = UriBuilder.fromUri(getPermissionsUrl())
+                .path(PERMISSION_API_CONTEXTS + context.toString() + "/roles/" + role.toString() +
+                      "/permissions/" + permission.toString())
+                .build()
+                .toString();
+
+        return deleteFromPermissions(url);
+    }
+
+    private Mono<ClientResponse> deleteFromPermissions(String url) {
+        return oauthClient.getOauthToken()
+                .flatMap(token -> this.client.delete()
+                        .uri(url)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + token.getAccess_token())
+                        .header(HttpHeaders.CACHE_CONTROL, CacheControl.noCache().getHeaderValue())
+                        .header(OTHeaders.REQUEST_ID, UUID.randomUUID().toString())
+                        .exchange()
+                        .flatMap(cr -> {
+                            if (!cr.statusCode().is2xxSuccessful()) {
+                                LOG.warn("Error calling permissions service, code:" +
+                                         cr.statusCode().getReasonPhrase());
+                                return Mono.error(new ResponseStatusException(cr.statusCode()));
+                            }
+                            return Mono.just(cr);
+                        })
+                );
     }
 
     private Mono<ClientResponse> getFromPermissions(String url) {
 
-        return getOauthToken()
+        return oauthClient.getOauthToken()
                 .flatMap(token -> this.client.get()
                         .uri(url)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token.getAccess_token())
@@ -245,7 +245,7 @@ public class PermissionsClient {
     private <T, P extends Publisher<T>> Mono<ClientResponse> putToPermissions(String url, P publisher,
                                                                               Class<T> elementClass) {
 
-        return getOauthToken()
+        return oauthClient.getOauthToken()
                 .flatMap(token -> this.client.put()
                         .uri(url)
                         .header(HttpHeaders.AUTHORIZATION, "Bearer " + token.getAccess_token())
@@ -266,22 +266,12 @@ public class PermissionsClient {
     }
 
     private String getPermissionsUrl() {
-        if (!Objects.isNull(permissionsClientConfig.getPermissionServiceId()) &&
+        if (!Strings.isNullOrEmpty((permissionsClientConfig.getPermissionServiceId())) &&
             !Objects.isNull(permsClientDiscoveryService)) {
             return getServiceUrlFromDiscovery(permissionsClientConfig.getPermissionServiceId(),
                                               permissionsClientConfig.getPermissionServiceUrl());
         } else {
             return permissionsClientConfig.getPermissionServiceUrl();
-        }
-    }
-
-    private String getOauthUrl() {
-        if (!Objects.isNull(permissionsClientConfig.getOauthServiceId()) &&
-            !Objects.isNull(permsClientDiscoveryService)) {
-            return getServiceUrlFromDiscovery(permissionsClientConfig.getOauthServiceId(),
-                                              permissionsClientConfig.getOauthServiceUrl());
-        } else {
-            return permissionsClientConfig.getOauthServiceUrl();
         }
     }
 
@@ -291,7 +281,7 @@ public class PermissionsClient {
                     .orElse(alternateUrl);
         }
 
-        return null;
+        return alternateUrl;
     }
 
 
