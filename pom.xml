@@ -13,12 +13,12 @@
     <connection>scm:git:git://github.com/opentable/${project.artifactId}.git</connection>
     <developerConnection>scm:git:git@github.com:opentable/${project.artifactId}.git</developerConnection>
     <url>http://github.com/opentable/${project.artifactId}</url>
-    <tag>HEAD</tag>
+    <tag>ot-permissions-client-1.0.0</tag>
   </scm>
 
   <groupId>com.opentable.permissions</groupId>
   <artifactId>ot-permissions-client</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.0</version>
   <description>Java client library to interact with permissions service</description>
 
   <properties>
