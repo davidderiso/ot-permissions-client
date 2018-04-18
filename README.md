@@ -6,12 +6,14 @@ This library provide a client to interact with the permissios service (https://g
 To use it:
 Include in the pom:
 
-  `<dependency>
-      <groupId>com.opentable.permissions</groupId>
-      <artifactId>ot-permissions-client</artifactId>
-      <version>1.0.1</version>
-  </dependency>
-   ` 
+  `
+      <dependency>
+          <groupId>com.opentable.permissions</groupId>
+          <artifactId>ot-permissions-client</artifactId>
+          <version>1.0.1</version>
+      </dependency>
+  `
+   
   In your code you cab Autowired:
   
   `PermissionsClient permissionsClient;`
