@@ -18,7 +18,7 @@
 
   <groupId>com.opentable.permissions</groupId>
   <artifactId>ot-permissions-client</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0.1-SNAPSHOT</version>
   <description>Java client library to interact with permissions service</description>
 
   <properties>
@@ -35,6 +35,7 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-beans</artifactId>
     </dependency>
+
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-context</artifactId>
@@ -111,24 +112,16 @@
       <groupId>org.springframework</groupId>
       <artifactId>spring-web</artifactId>
     </dependency>
+
     <dependency>
         <groupId>org.springframework</groupId>
         <artifactId>spring-webflux</artifactId>
-    </dependency>
-    <dependency>
-        <groupId>javax.inject</groupId>
-        <artifactId>javax.inject</artifactId>
     </dependency>
 
     <dependency>
       <groupId>com.opentable</groupId>
       <artifactId>otj-httpheaders</artifactId>
       <version>0.1.1</version>
-    </dependency>
-
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
     </dependency>
 
   </dependencies>

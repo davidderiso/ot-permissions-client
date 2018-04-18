@@ -1,6 +1,6 @@
 package com.opentable.permissions.client;
 
-import com.google.common.base.Strings;
+
 import com.opentable.httpheaders.OTHeaders;
 import com.opentable.permissions.client.oauth.OauthClient;
 import com.opentable.permissions.discovery.PermsClientDiscoveryService;
@@ -21,8 +21,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+
 import org.springframework.web.server.ResponseStatusException;
 import reactor.core.publisher.Mono;
 
@@ -32,7 +34,6 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-
 public class PermissionsClient {
 
     private static final String PERMISSION_API_CONTEXTS = "/api/v1/contexts/";
@@ -41,21 +42,21 @@ public class PermissionsClient {
 
     private final PermissionsClientConfig permissionsClientConfig;
 
-    private PermsClientDiscoveryService permsClientDiscoveryService;
+    private PermsClientDiscoveryService permsClientDiscoveryService = null;
 
     private final WebClient client = WebClient.create();
 
     private final OauthClient oauthClient;
 
-    private static final Logger LOG = LoggerFactory.getLogger(PermsClientDiscoveryService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PermissionsClient.class);
 
     public PermissionsClient(PermissionsClientConfig permissionsClientConfig) {
+
         this.permissionsClientConfig = permissionsClientConfig;
         this.oauthClient = new OauthClient(permissionsClientConfig.getClientId(),
                                            permissionsClientConfig.getClientSecret(),
                                            permissionsClientConfig.getOauthServiceId(),
                                            permissionsClientConfig.getOauthServiceUrl());
-
     }
 
     public void setDiscoveryClient(DiscoveryClient discoveryClient) {
@@ -64,6 +65,7 @@ public class PermissionsClient {
     }
 
     public Mono<PrincipalPermissionsResponse> getPrincipalPermissions(Urn context, Urn principal) {
+        LOG.info("getPrincipalPermissions");
         String url = UriBuilder.fromUri(getPermissionsUrl())
                 .path(PERMISSION_API_CONTEXTS + context.toString() + PRINCIPALS + principal.toString() +
                       "/permissions")
@@ -244,7 +246,6 @@ public class PermissionsClient {
 
     private <T, P extends Publisher<T>> Mono<ClientResponse> putToPermissions(String url, P publisher,
                                                                               Class<T> elementClass) {
-
         return oauthClient.getOauthToken()
                 .flatMap(token -> this.client.put()
                         .uri(url)
@@ -266,7 +267,8 @@ public class PermissionsClient {
     }
 
     private String getPermissionsUrl() {
-        if (!Strings.isNullOrEmpty((permissionsClientConfig.getPermissionServiceId())) &&
+        if (!Objects.isNull(permissionsClientConfig.getPermissionServiceId())&&
+            !permissionsClientConfig.getPermissionServiceId().isEmpty()  &&
             !Objects.isNull(permsClientDiscoveryService)) {
             return getServiceUrlFromDiscovery(permissionsClientConfig.getPermissionServiceId(),
                                               permissionsClientConfig.getPermissionServiceUrl());

@@ -1,37 +1,36 @@
 package com.opentable.permissions;
 
+import com.opentable.permissions.client.PermissionsClient;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-@ComponentScan("com.opentable.permissions")
 public class PermissionsClientConfiguration {
 
-    @Value("${ot.permissionsClient.serviceId}")
-    private String permissionServiceId;
-    @Value("${ot.permissionsClient.serviceUrl}")
-    private String permissionServiceUrl;
+    @Bean
+    public PermissionsClientConfig permissionsClientConfig (
+            @Value("${ot.permissionsClient.serviceId}") final String permissionServiceId,
+            @Value("${ot.permissionsClient.serviceUrl}") final String permissionServiceUrl,
 
-    @Value("${ot.permissionsClient.oauthServiceId}")
-    private String oauthServiceId;
-    @Value("${ot.permissionsClient.oauthServiceUrl}")
-    private String oauthServiceUrl;
+            @Value("${ot.permissionsClient.oauthServiceId}") final String oauthServiceId,
+            @Value("${ot.permissionsClient.oauthServiceUrl}") final String oauthServiceUrl,
 
-    @Value("${ot.permissionsClient.clientId}")
-    private String clientId;
-    @Value("${ot.permissionsClient.clientSecret}")
-    private String clientSecret;
-
-    public PermissionsClientConfig config () {
+            @Value("${ot.permissionsClient.clientId}") final String clientId,
+            @Value("${ot.permissionsClient.clientSecret}") final String clientSecret) {
         return PermissionsClientConfig
                 .builder()
-                .oauthServiceUrl(oauthServiceUrl)
-                .oauthServiceId(oauthServiceId)
-                .permissionServiceUrl(permissionServiceUrl)
-                .permissionServiceId(permissionServiceId)
-                .clientSecret(clientSecret)
                 .clientId(clientId)
+                .clientSecret(clientSecret)
+                .oauthServiceId(oauthServiceId)
+                .oauthServiceUrl(oauthServiceUrl)
+                .permissionServiceId(permissionServiceId)
+                .permissionServiceUrl(permissionServiceUrl)
                 .build();
+    }
+
+    @Bean
+    public PermissionsClient permissionsClient(PermissionsClientConfig config) {
+        return new PermissionsClient(config);
     }
 }

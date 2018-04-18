@@ -1,6 +1,5 @@
 package com.opentable.permissions.client.oauth;
 
-import com.google.common.base.Strings;
 import com.opentable.httpheaders.OTHeaders;
 import com.opentable.permissions.discovery.PermsClientDiscoveryService;
 import com.opentable.permissions.model.oauth.OauthTokenResponse;
@@ -53,6 +52,7 @@ public class OauthClient {
     }
 
     public Mono<OauthTokenResponse> getOauthToken() {
+
         Long nowLong = java.time.Instant.now().getEpochSecond();
         if (!Objects.isNull(oauthTokenResponse) &&
             oauthTokenResponse.getExpires_at() > nowLong) {
@@ -105,7 +105,8 @@ public class OauthClient {
     }
 
     private String getOauthUrl() {
-        if (!Strings.isNullOrEmpty(oauthServiceId) &&
+        if (!Objects.isNull(oauthServiceId) &&
+            !oauthServiceId.isEmpty() &&
             !Objects.isNull(discoveryClient)) {
             return getServiceUrlFromDiscovery(oauthServiceId,
                                               oauthServiceUrl);

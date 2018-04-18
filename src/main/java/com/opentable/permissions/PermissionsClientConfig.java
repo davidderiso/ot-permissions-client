@@ -14,7 +14,6 @@ import lombok.NoArgsConstructor;
 @JsonSerialize
 public class PermissionsClientConfig {
 
-
     private String permissionServiceId;
 
     private String permissionServiceUrl;

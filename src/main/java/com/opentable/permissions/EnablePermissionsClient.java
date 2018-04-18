@@ -14,9 +14,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Configuration
-@Import({PermissionsClientConfiguration.class,
-        PermissionsClientBuilder.class,
-        PermissionsClientFactory.class})
+@Import(PermissionsClientConfiguration.class)
 public @interface EnablePermissionsClient {
 
 }
