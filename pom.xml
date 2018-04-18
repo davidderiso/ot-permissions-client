@@ -18,7 +18,7 @@
 
   <groupId>com.opentable.permissions</groupId>
   <artifactId>ot-permissions-client</artifactId>
-  <version>1.0.1-SNAPSHOT</version>
+  <version>1.0.2-SNAPSHOT</version>
   <description>Java client library to interact with permissions service</description>
 
   <properties>
