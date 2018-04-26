@@ -31,12 +31,16 @@ if you need the reactive library, you will need to include:
 * `ot.permissionsClient.clientId`: The service clientId (needed to autheticaterequests to permissions service)
 * `ot.permissionsClient.clientSecret`: The service client secret (needed to autheticaterequests to permissions service)
    
-  In your code you can Autowired:
-  
+In your code you need to enable the permission client with:
+   
+   `@EnablePermissionsClient`
+   
+Then you can Autowire:
+
   `PermissionsClient permissionsClient;`
   
-  Then use it in the code:
-  
+To use it in the code:
+
 ```java
 Mono<PrincipalPermissionsResponse> perms = permissionsClient.getPrincipalPermissions(
                                         new Urn ("ot.restaurant","1"), 
