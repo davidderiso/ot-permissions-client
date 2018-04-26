@@ -23,7 +23,7 @@ if you need the reactive library, you will need to include:
  Your configuration file will need to have the following variables:
  
 * `ot.permissionsClient.serviceId`: the permissions service id (should be service-rlc-permissions).Optional if you specify the url
-* `ot.permissionsClient.serviceUrl`: the permissions service url. Optional if you specified the serviceId
+* `ot.permissionsClient.serviceUrl`: the permissions service url. Optional if you specify the serviceId
 
 * `ot.permissionsClient.oauthServiceId`: the oauth service id. Optional if you specify the oauth service url.
 * `ot.permissionsClient.oauthServiceUrl`: the oauth service url. Optional if you specify the service Id.
